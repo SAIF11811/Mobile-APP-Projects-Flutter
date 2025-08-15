@@ -376,7 +376,6 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
               ),
             ),
           ),
-
           Positioned(
             top: screenSize.height * 0.09,
             right: screenSize.width * 0.02,
