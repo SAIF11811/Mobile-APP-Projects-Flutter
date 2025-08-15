@@ -1,10 +1,8 @@
-import 'package:e_commerce/src/view/screen/order_done_screen.dart';
 import 'package:e_commerce/src/view/screen/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:e_commerce/core/app_theme.dart';
-import 'package:e_commerce/src/view/screen/home_screen.dart';
 
 void main() {
   SystemChrome.setSystemUIOverlayStyle(
