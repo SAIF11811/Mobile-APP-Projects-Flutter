@@ -83,33 +83,44 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
   // ------------------- PDF Save -------------------
   Future<void> _saveWhiteboard() async {
     String fileName = "whiteboard_${DateTime.now().millisecondsSinceEpoch}";
+    final controller = TextEditingController(text: fileName);
 
-    final TextEditingController controller = TextEditingController(text: fileName);
     bool? confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Enter file name"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: "File name"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        return SingleChildScrollView(
+          child: AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            title: const Text("Enter file name"),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: size.width * 0.9),
+              child: TextField(
+                controller: controller,
+                decoration: const InputDecoration(hintText: "File name"),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Save"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Save"),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed != true) return;
 
     fileName = controller.text.trim();
-    if (fileName.isEmpty) fileName = "whiteboard_${DateTime.now().millisecondsSinceEpoch}";
+    if (fileName.isEmpty) {
+      fileName = "whiteboard_${DateTime.now().millisecondsSinceEpoch}";
+    }
 
     try {
       RenderRepaintBoundary boundary =
@@ -155,6 +166,7 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
   void _openPenSettings(String mode) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         Color tempColor = mode == "pen" ? Color(_penColor) : Color(_highlighterColor);
@@ -164,90 +176,108 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
           Colors.green, Colors.blueAccent, Colors.purple, Colors.brown, Colors.pink
         ];
 
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.white.withOpacity(0.95), Colors.grey[200]!],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+        final size = MediaQuery.of(context).size;
+
+        return SafeArea(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: size.height * 0.7,
+                maxWidth: size.width * 0.95,
               ),
-            ),
-            child: StatefulBuilder(
-              builder: (context, setModalState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      mode == "pen" ? "✏️ Pen Settings" : "🖌 Highlighter Settings",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: standardColors.map((c) {
-                        return GestureDetector(
-                          onTap: () => setModalState(() => tempColor = c),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: tempColor == c ? Border.all(color: Colors.blue, width: 3) : null,
-                            ),
-                            child: CircleAvatar(
-                              backgroundColor: c,
-                              radius: tempColor == c ? 22 : 18,
-                              child: tempColor == c ? const Icon(Icons.check, color: Colors.white) : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.white.withOpacity(0.95), Colors.grey[200]!],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: StatefulBuilder(
+                builder: (context, setModalState) {
+                  return SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Width:"),
-                        Expanded(
-                          child: Slider(
-                            min: 1,
-                            max: 30,
-                            value: tempWidth,
-                            onChanged: (v) => setModalState(() => tempWidth = v),
+                        Text(
+                          mode == "pen" ? "✏️ Pen Settings" : "🖌 Highlighter Settings",
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text("${tempWidth.toStringAsFixed(1)} px"),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: standardColors.map((c) {
+                            return GestureDetector(
+                              onTap: () => setModalState(() => tempColor = c),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: tempColor == c ? Border.all(color: Colors.blue, width: 3) : null,
+                                ),
+                                child: CircleAvatar(
+                                  backgroundColor: c,
+                                  radius: tempColor == c ? 22 : 18,
+                                  child: tempColor == c ? const Icon(Icons.check, color: Colors.white) : null,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            const Text("Width:"),
+                            Expanded(
+                              child: Slider(
+                                min: 1,
+                                max: 30,
+                                value: tempWidth,
+                                onChanged: (v) => setModalState(() => tempWidth = v),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text("${tempWidth.toStringAsFixed(1)} px"),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.check),
+                            label: const Text("Apply"),
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              minimumSize: const Size.fromHeight(45),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                if (mode == "pen") {
+                                  _penColor = tempColor.value;
+                                  _penWidth = tempWidth;
+                                } else {
+                                  _highlighterColor = tempColor.value;
+                                  _highlighterWidth = tempWidth;
+                                }
+                                _color = tempColor.value;
+                                _width = tempWidth;
+                                _mode = mode;
+                              });
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text("Apply"),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        minimumSize: const Size.fromHeight(45),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          if (mode == "pen") {
-                            _penColor = tempColor.value;
-                            _penWidth = tempWidth;
-                          } else {
-                            _highlighterColor = tempColor.value;
-                            _highlighterWidth = tempWidth;
-                          }
-                          _color = tempColor.value;
-                          _width = tempWidth;
-                          _mode = mode;
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -259,43 +289,58 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
   void _openEraserSettings() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         double tempWidth = _eraserWidth;
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            color: Colors.white,
-            child: StatefulBuilder(
-              builder: (context, setModalState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text("🧽 Eraser Size", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    Slider(
-                      min: 5,
-                      max: 50,
-                      value: tempWidth,
-                      onChanged: (v) => setModalState(() => tempWidth = v),
+        final size = MediaQuery.of(context).size;
+
+        return SafeArea(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: size.height * 0.5,
+                maxWidth: size.width * 0.95,
+              ),
+              padding: const EdgeInsets.all(20),
+              color: Colors.white,
+              child: StatefulBuilder(
+                builder: (context, setModalState) {
+                  return SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("🧽 Eraser Size",
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Slider(
+                          min: 5,
+                          max: 50,
+                          value: tempWidth,
+                          onChanged: (v) => setModalState(() => tempWidth = v),
+                        ),
+                        Text("${tempWidth.toStringAsFixed(1)} px"),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _eraserWidth = tempWidth;
+                                _width = _eraserWidth;
+                                _color = Colors.white.value;
+                                _mode = "eraser";
+                              });
+                              Navigator.pop(context);
+                            },
+                            child: const Text("Apply"),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text("${tempWidth.toStringAsFixed(1)} px"),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _eraserWidth = tempWidth;
-                          _width = _eraserWidth;
-                          _color = Colors.white.value;
-                          _mode = "eraser";
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: const Text("Apply"),
-                    ),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -359,57 +404,79 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
     final Size screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          GestureDetector(
-            onPanStart: (details) => _startStroke(details.localPosition),
-            onPanUpdate: (details) => _updateStroke(details.localPosition),
-            onPanEnd: (_) => _endStroke(),
-            child: RepaintBoundary(
-              key: _whiteboardKey,
-              child: SizedBox(
-                width: screenSize.width,
-                height: screenSize.height,
-                child: CustomPaint(
-                  painter: WhiteboardPainter(_strokes, _currentStroke),
+      body: SingleChildScrollView(
+        child: Stack(
+          children: [
+            GestureDetector(
+              onPanStart: (details) => _startStroke(details.localPosition),
+              onPanUpdate: (details) => _updateStroke(details.localPosition),
+              onPanEnd: (_) => _endStroke(),
+              child: RepaintBoundary(
+                key: _whiteboardKey,
+                child: SizedBox(
+                  width: screenSize.width,
+                  height: screenSize.height,
+                  child: CustomPaint(
+                    painter: WhiteboardPainter(_strokes, _currentStroke),
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            top: screenSize.height * 0.09,
-            right: screenSize.width * 0.02,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Column(
-                  children: [
-                    _toolButton(Icons.edit, "pen", () {
-                      setState(() { _mode = "pen"; _color = _penColor; _width = _penWidth; });
-                      _openPenSettings("pen");
-                    }, colorIndicator: Color(_penColor), iconColor: Colors.black),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.brush, "highlighter", () {
-                      setState(() { _mode = "highlighter"; _color = _highlighterColor; _width = _highlighterWidth; });
-                      _openPenSettings("highlighter");
-                    }, colorIndicator: Color(_highlighterColor), iconColor: Colors.deepOrange),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.cleaning_services, "eraser", _openEraserSettings, iconColor: Colors.blueGrey),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.undo, "undo", _undo, selectable: false, iconColor: Colors.purple),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.redo, "redo", _redo, selectable: false, iconColor: Colors.purple),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.delete, "clear", _clear, selectable: false, iconColor: Colors.red),
-                    SizedBox(height: screenSize.height * 0.02),
-                    _toolButton(Icons.save, "save", _saveWhiteboard, selectable: false, iconColor: Colors.green),
-                  ],
+            Positioned(
+              top: screenSize.height * 0.09,
+              right: screenSize.width * 0.02,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: screenSize.height * 0.9,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _toolButton(Icons.edit, "pen", () {
+                            setState(() {
+                              _mode = "pen";
+                              _color = _penColor;
+                              _width = _penWidth;
+                            });
+                            _openPenSettings("pen");
+                          }, colorIndicator: Color(_penColor), iconColor: Colors.black),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.brush, "highlighter", () {
+                            setState(() {
+                              _mode = "highlighter";
+                              _color = _highlighterColor;
+                              _width = _highlighterWidth;
+                            });
+                            _openPenSettings("highlighter");
+                          }, colorIndicator: Color(_highlighterColor), iconColor: Colors.deepOrange),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.cleaning_services, "eraser", _openEraserSettings,
+                              iconColor: Colors.blueGrey),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.undo, "undo", _undo,
+                              selectable: false, iconColor: Colors.purple),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.redo, "redo", _redo,
+                              selectable: false, iconColor: Colors.purple),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.delete, "clear", _clear,
+                              selectable: false, iconColor: Colors.red),
+                          SizedBox(height: screenSize.height * 0.02),
+                          _toolButton(Icons.save, "save", _saveWhiteboard,
+                              selectable: false, iconColor: Colors.green),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
