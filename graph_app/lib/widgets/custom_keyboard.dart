@@ -19,7 +19,7 @@ class CustomKeyboard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 400,
+      height: 360,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
