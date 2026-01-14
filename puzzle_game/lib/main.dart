@@ -20,8 +20,6 @@ class PhotoPuzzleApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Puzzle Game',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: HomeScreen(),
