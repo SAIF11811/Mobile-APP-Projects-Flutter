@@ -94,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Image.file(
                             _image!,
                             width: double.infinity,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),

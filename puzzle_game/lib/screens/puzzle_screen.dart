@@ -1,9 +1,10 @@
 import 'dart:io';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import '../models/puzzle_data.dart';
 import '../models/tile_model.dart';
 import '../widgets/puzzle_tile.dart';
-import '../utils/image_utils.dart';
 
 class PuzzleScreen extends StatefulWidget {
   final File imageFile;
@@ -23,27 +24,57 @@ class PuzzleScreen extends StatefulWidget {
 class _PuzzleScreenState extends State<PuzzleScreen> {
   List<Tile> tiles = [];
   bool _showOriginal = false;
+  double? gridWidth;
+  double? gridHeight;
+  double? tileWidth;
+  double? tileHeight;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _generateTiles();
+    _preparePuzzle();
   }
 
-  Future<void> _generateTiles() async {
-    tiles = await ImageUtils.splitImage(widget.imageFile, widget.gridSize);
-    if (widget.shuffle) _shuffleTiles();
-    setState(() {});
-  }
+  Future<void> _preparePuzzle() async {
+    setState(() => _isLoading = true);
 
-  void _shuffleTiles() {
-    tiles.shuffle(Random());
-    for (int i = 0; i < tiles.length; i++) {
-      tiles[i].currentRow = i ~/ widget.gridSize;
-      tiles[i].currentCol = i % widget.gridSize;
+    final bytes = await widget.imageFile.readAsBytes();
+    final decodedImage = img.decodeImage(bytes)!;
+    final aspectRatio = decodedImage.width / decodedImage.height;
+
+    List<Tile> generatedTiles = await compute(generateTiles, {
+      'imageFile': widget.imageFile,
+      'gridSize': widget.gridSize,
+      'shuffle': widget.shuffle,
+    });
+
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final screenHeight = media.size.height;
+    double maxGridWidth = screenWidth * 0.9;
+    double maxGridHeight = screenHeight * 0.6;
+
+    double w = maxGridWidth;
+    double h = w / aspectRatio;
+    if (h > maxGridHeight) {
+      h = maxGridHeight;
+      w = h * aspectRatio;
     }
-  }
 
+    int n = widget.gridSize;
+    double tW = (w - (n - 1) * 4) / n;
+    double tH = (h - (n - 1) * 4) / n;
+
+    setState(() {
+      tiles = generatedTiles;
+      gridWidth = w;
+      gridHeight = h;
+      tileWidth = tW;
+      tileHeight = tH;
+      _isLoading = false;
+    });
+  }
   void _swapTiles(int index1, int index2) {
     setState(() {
       var tempRow = tiles[index1].currentRow;
@@ -66,18 +97,13 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
-              colors: [
-                Colors.deepPurple.shade200,
-                Colors.deepPurple.shade50,
-              ],
+              colors: [Colors.deepPurple.shade200, Colors.deepPurple.shade50],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -89,38 +115,24 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
               SizedBox(height: 10),
               Text(
                 'Congratulations!',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple.shade800),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurple.shade800),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 10),
               Text(
                 'You completed the puzzle!',
-                style: TextStyle(
-                    fontSize: 18, color: Colors.deepPurple.shade700),
+                style: TextStyle(fontSize: 18, color: Colors.deepPurple.shade700),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                },
+                onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 ),
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
+                child: Text('Continue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
           ),
@@ -133,29 +145,41 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final screenWidth = media.size.width;
-    final screenHeight = media.size.height;
 
-    int n = widget.gridSize;
-    double tileSize =
-        (screenWidth - screenWidth * 0.05 - (4 * (n - 1))) / n;
-    double gridHeight = tileSize * n + 10 * (n - 1);
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Puzzle Game',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: screenWidth * 0.07,
+            ),
+          ),
+          backgroundColor: Colors.amber.shade900,
+          centerTitle: true,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Puzzle Round',
           style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: screenWidth * 0.07),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: screenWidth * 0.07,
+          ),
         ),
         backgroundColor: Colors.amber.shade900,
-        centerTitle: true,
         foregroundColor: Colors.white,
+        centerTitle: true,
       ),
-      body: tiles.isEmpty
-          ? Center(child: CircularProgressIndicator())
-          : Column(
+      body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           GestureDetector(
@@ -163,25 +187,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             onTapUp: (_) => setState(() => _showOriginal = false),
             onTapCancel: () => setState(() => _showOriginal = false),
             child: Container(
-              margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+              margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.02),
               padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.06,
-                  vertical: screenHeight * 0.015),
+                  horizontal: MediaQuery.of(context).size.width * 0.06,
+                  vertical: MediaQuery.of(context).size.height * 0.015),
               decoration: BoxDecoration(
                   color: Colors.amber.shade900,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(2, 2),
-                    )
-                  ]),
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]),
               child: Text(
                 'Hold to Preview',
                 style: TextStyle(
                     color: Colors.white,
-                    fontSize: screenWidth * 0.05,
+                    fontSize: MediaQuery.of(context).size.width * 0.05,
                     fontWeight: FontWeight.bold),
               ),
             ),
@@ -191,17 +209,17 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
               alignment: Alignment.center,
               children: [
                 Container(
-                  width: tileSize * n + 10 * (n - 1),
+                  width: gridWidth,
                   height: gridHeight,
                   padding: EdgeInsets.all(8),
                   child: GridView.builder(
                     physics: NeverScrollableScrollPhysics(),
                     itemCount: tiles.length,
-                    gridDelegate:
-                    SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: n,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: widget.gridSize,
                       crossAxisSpacing: 4,
                       mainAxisSpacing: 4,
+                      childAspectRatio: tileWidth! / tileHeight!,
                     ),
                     itemBuilder: (context, index) {
                       return DragTarget<int>(
@@ -211,17 +229,13 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                             feedback: Material(
                               color: Colors.transparent,
                               child: SizedBox(
-                                width: tileSize,
-                                height: tileSize,
-                                child: PuzzleTile(
-                                    tile: tiles[index], shadow: true),
+                                width: tileWidth,
+                                height: tileHeight,
+                                child: PuzzleTile(tile: tiles[index], shadow: true),
                               ),
                             ),
                             childWhenDragging: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
                             ),
                             child: PuzzleTile(tile: tiles[index]),
                           );
@@ -237,17 +251,11 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                 ),
                 if (_showOriginal)
                   Container(
-                    width: tileSize * n + 10 * (n - 1),
+                    width: gridWidth,
                     height: gridHeight,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        widget.imageFile,
-                        fit: BoxFit.cover,
-                      ),
+                      child: Image.file(widget.imageFile, fit: BoxFit.cover),
                     ),
                   ),
               ],
