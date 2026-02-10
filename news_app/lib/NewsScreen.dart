@@ -28,7 +28,7 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Future<void> fetchNews() async {
-    const url = 'https://newsapi.org/v2/everything';
+    const url = 'YOUR_URL';
     try {
       final response = await _dio.get(url, queryParameters: {
         'q': widget.query,
