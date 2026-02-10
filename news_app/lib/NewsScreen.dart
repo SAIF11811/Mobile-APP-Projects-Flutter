@@ -16,7 +16,7 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen> {
   final Dio _dio = Dio();
-  final String _apiKey = 'cbf28408ceb3440495a6267403ea7b7c';
+  final String _apiKey = 'YOUR_API';
   List<dynamic> _articles = [];
   bool _isLoading = true;
   String? _error;
